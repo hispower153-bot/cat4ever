@@ -1,193 +1,156 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
-import PayPalButton from '@/components/PayPalButton';
+import { useRouter } from 'next/navigation';
+import { useToast } from '../components/ToastProvider';
 
-export default function Home() {
-  const [birthYear, setBirthYear] = useState('');
-  const [birthMonth, setBirthMonth] = useState('');
-  const [birthDay, setBirthDay] = useState('');
-  const [preview, setPreview] = useState('');
-  const [fullFortune, setFullFortune] = useState('');
-  const [unlocked, setUnlocked] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [loadingFull, setLoadingFull] = useState(false);
-  const [error, setError] = useState('');
+const miniFeatures = [
+  { key: 'gunghap', icon: '♡', title: '냥궁합', badge: 'bg-pink/20 text-pink' },
+  { key: 'tti', icon: '爪', title: '띠운세', badge: 'bg-amber/20 text-amber' },
+  { key: 'star', icon: '✦', title: '별자리', badge: 'bg-violet/20 text-violet' },
+];
 
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 100 }, (_, i) => currentYear - i);
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const days = Array.from({ length: 31 }, (_, i) => i + 1);
+const communityPosts = [
+  { cls: 'from-[#D9C89A] to-[#B8965A]', emoji: '🐈', cap: '창가 명상 중', who: '나비 · 혜영 집사' },
+  { cls: 'from-[#A8B896] to-[#6F8259]', emoji: '😺', cap: '간식 쟁탈전', who: '두부 · 준영 집사' },
+  { cls: 'from-[#C9A8A0] to-[#A8695C]', emoji: '🐾', cap: '박스가 최고야', who: '콩이 · 수민 집사' },
+  { cls: 'from-[#A0B8C0] to-[#5C8299]', emoji: '🐈‍⬛', cap: '낮잠 3시간째', who: '모카 · 지훈 집사' },
+];
 
-  const birthDate =
-    birthYear && birthMonth && birthDay
-      ? `${birthYear}-${String(birthMonth).padStart(2, '0')}-${String(birthDay).padStart(2, '0')}`
-      : '';
+export default function HomePage() {
+  const { showToast } = useToast();
+  const router = useRouter();
+  const [ownerName, setOwnerName] = useState('');
+  const [catName, setCatName] = useState('');
 
-  const handleGetPreview = async () => {
-    if (!birthYear || !birthMonth || !birthDay) {
-      setError('생년월일을 모두 선택해주세요.');
-      return;
-    }
-    setError('');
-    setLoading(true);
-    setPreview('');
-    setFullFortune('');
-    setUnlocked(false);
-
-    try {
-      const res = await fetch('/api/fortune', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ birthDate, unlocked: false }),
-      });
-      const data = await res.json();
-      if (data.error) {
-        setError(data.error);
-      } else {
-        setPreview(data.fortune);
-      }
-    } catch (e) {
-      setError('운세를 불러오는 중 문제가 발생했어요. 잠시 후 다시 시도해주세요.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePayError = (message: string) => {
-    setError(message);
-  };
-
-  const handleUnlock = async () => {
-    setLoadingFull(true);
-    setError('');
-    setUnlocked(true); // PayPal 결제 자체는 이미 서버에서 검증 완료된 상태
-    try {
-      const res = await fetch('/api/fortune', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ birthDate, unlocked: true }),
-      });
-      const data = await res.json();
-      if (data.error) {
-        // PayPal 결제는 성공했지만, 운세 생성(Anthropic API)에서 실패한 경우
-        setFullFortune('');
-        setError(`✅ PayPal 결제는 정상 처리됐어요! 다만 운세 생성 단계에서 오류: ${data.error}`);
-      } else {
-        setFullFortune(data.fortune);
-      }
-    } catch (e) {
-      setError('✅ PayPal 결제는 정상 처리됐어요! 다만 운세를 불러오는 중 네트워크 오류가 발생했습니다.');
-    } finally {
-      setLoadingFull(false);
-    }
+  const startJourney = () => {
+    const params = new URLSearchParams();
+    if (ownerName) params.set('owner', ownerName);
+    if (catName) params.set('cat', catName);
+    router.push(`/saju-tarot?${params.toString()}`);
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center px-4 py-12 bg-cream">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <div className="text-6xl mb-3">🐱</div>
-          <h1 className="text-3xl font-bold text-deep">냥사주</h1>
-          <p className="text-deep/60 mt-2">오늘의 고양이 운세를 확인해보세요</p>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-4">
-          <label className="block text-sm font-medium text-deep mb-2">
-            생년월일
-          </label>
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            <select
-              value={birthYear}
-              onChange={(e) => setBirthYear(e.target.value)}
-              className="border border-peach rounded-lg px-2 py-3 focus:outline-none focus:ring-2 focus:ring-coral bg-white"
-            >
-              <option value="">년</option>
-              {years.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-            <select
-              value={birthMonth}
-              onChange={(e) => setBirthMonth(e.target.value)}
-              className="border border-peach rounded-lg px-2 py-3 focus:outline-none focus:ring-2 focus:ring-coral bg-white"
-            >
-              <option value="">월</option>
-              {months.map((m) => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-            <select
-              value={birthDay}
-              onChange={(e) => setBirthDay(e.target.value)}
-              className="border border-peach rounded-lg px-2 py-3 focus:outline-none focus:ring-2 focus:ring-coral bg-white"
-            >
-              <option value="">일</option>
-              {days.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-          </div>
-          <button
-            onClick={handleGetPreview}
-            disabled={loading}
-            className="w-full bg-coral text-white rounded-lg py-3 font-semibold hover:bg-coral/90 transition disabled:opacity-50"
-          >
-            {loading ? '운세 보는 중...' : '오늘의 운세 보기'}
-          </button>
-          {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
-
-          {/* 임시: Anthropic 크레딧 없이도 PayPal 결제 흐름만 따로 테스트하기 위한 버튼입니다.
-              PayPal 테스트가 끝나고 크레딧 문제가 해결되면 이 버튼은 지워도 됩니다. */}
-          <button
-            onClick={() => {
-              setError('');
-              setPreview('(테스트용 미리보기 - 실제 운세 아님) 오늘 고양이가 당신을 지켜보고 있어요...');
-              setFullFortune('');
-              setUnlocked(false);
-            }}
-            className="w-full text-xs text-deep/40 underline mt-2"
-          >
-            [테스트] 운세 생성 건너뛰고 PayPal만 확인하기
-          </button>
-        </div>
-
-        {preview && (
-          <div className="bg-white rounded-2xl shadow-lg p-6 mb-4">
-            <h2 className="font-semibold text-deep mb-2">🔮 오늘의 미리보기</h2>
-            <p className="text-deep/80 leading-relaxed">{preview}</p>
-          </div>
-        )}
-
-        {preview && !unlocked && (
-          <div className="relative bg-white rounded-2xl shadow-lg p-6 overflow-hidden">
-            <div className="blur-sm select-none pointer-events-none">
-              <h2 className="font-semibold text-deep mb-2">✨ 전체 운세</h2>
-              <p className="text-deep/80 leading-relaxed">
-                총운, 애정운, 재물운, 그리고 오늘의 행운 조언까지
-                자세한 이야기가 여기에 펼쳐집니다. 궁금하지 않나요?
-                고양이 신탁이 당신만을 위해 준비했어요.
-              </p>
-            </div>
-            <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center px-6">
-              <p className="text-deep font-medium mb-3">🔒 전체 운세 잠금 해제 ($1.99)</p>
-              <div className="w-full max-w-[250px]">
-                <PayPalButton onSuccess={handleUnlock} onError={handlePayError} />
-              </div>
-              {loadingFull && (
-                <p className="text-deep/60 text-sm mt-2">운세를 불러오는 중...</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {unlocked && fullFortune && (
-          <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-coral">
-            <h2 className="font-semibold text-deep mb-2">✨ 전체 운세</h2>
-            <p className="text-deep/80 leading-relaxed whitespace-pre-line">{fullFortune}</p>
-          </div>
-        )}
+    <main className="max-w-site mx-auto px-8">
+      {/* Hero */}
+      <div className="text-center pt-5 pb-12">
+        <p className="font-accent italic text-[13px] tracking-[3px] text-rust mb-4">
+          SAJU · TAROT · YOUR CAT&apos;S DESTINY
+        </p>
+        <h1 className="font-serif font-black text-3xl md:text-[40px] leading-[1.4] text-forest mb-4">
+          우리 냥이의 오늘,
+          <br />
+          별과 사주가 <span className="text-gold">먼저</span> 알고 있어요
+        </h1>
+        <p className="text-[15px] text-inkDim">
+          생년월일 하나로 시작하는 고양이 전용 사주 · 타로
+        </p>
       </div>
+
+      {/* Bento: saju | tarot | mini stack */}
+      <div className="grid grid-cols-1 md:grid-cols-[1.15fr_1fr_68px] gap-3 mb-5 items-stretch">
+        <Link
+          href="/saju-tarot"
+          className="h-full bg-gradient-to-br from-forest to-forestDeep border border-amber/35 rounded-[20px] p-8 relative overflow-hidden shadow-[0_14px_32px_rgba(31,49,41,0.25)] hover:-translate-y-1 hover:shadow-[0_18px_38px_rgba(31,49,41,0.32)] transition-all"
+        >
+          <span className="font-mono text-[11px] tracking-[2px] px-2.5 py-1 rounded-full inline-block mb-4 text-amber bg-amber/15">
+            SAJU
+          </span>
+          <h2 className="font-serif text-xl text-cream mb-2.5">고양이 사주 보기</h2>
+          <p className="text-[13.5px] text-cream/65 leading-relaxed mb-5">
+            생년월일로 풀어보는 우리 냥이의 오늘 총운 · 애정운 · 재물운
+          </p>
+          <span className="text-[13px] font-bold text-amber">지금 시작하기 →</span>
+          <div className="absolute -right-2 -bottom-4 text-[90px] opacity-[0.07] font-serif text-cream">
+            卦
+          </div>
+        </Link>
+
+        <Link
+          href="/saju-tarot"
+          className="h-full bg-gradient-to-br from-forest to-forestDeep border border-violet/35 rounded-[20px] p-8 relative overflow-hidden shadow-[0_14px_32px_rgba(31,49,41,0.25)] hover:-translate-y-1 hover:shadow-[0_18px_38px_rgba(31,49,41,0.32)] transition-all"
+        >
+          <span className="font-mono text-[11px] tracking-[2px] px-2.5 py-1 rounded-full inline-block mb-4 text-violet bg-violet/15">
+            TAROT
+          </span>
+          <h2 className="font-serif text-xl text-cream mb-2.5">고양이 타로 보기</h2>
+          <p className="text-[13.5px] text-cream/65 leading-relaxed mb-5">
+            카드 한 장이 알려주는 오늘의 기분과 조언
+          </p>
+          <span className="text-[13px] font-bold text-violet">카드 뽑기 →</span>
+          <div className="absolute -right-2 -bottom-4 text-[90px] opacity-[0.07] font-serif text-cream">
+            ✦
+          </div>
+        </Link>
+
+        <div className="flex flex-row md:flex-col gap-2 h-full">
+          {miniFeatures.map((m) => (
+            <button
+              key={m.key}
+              onClick={() => showToast(`${m.title} 페이지는 곧 만나요 ✦`)}
+              className="flex-1 bg-gradient-to-br from-forest to-forestDeep border border-cream/10 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-[0_6px_14px_rgba(31,49,41,0.18)] hover:-translate-y-1 transition-transform p-1"
+            >
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${m.badge}`}>
+                {m.icon}
+              </span>
+              <span className="text-[8px] font-bold text-cream">{m.title}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Quickstart */}
+      <div className="bg-paper border border-line rounded-full p-2 flex items-center gap-1 max-w-[620px] mx-auto mb-24 shadow-[0_10px_26px_rgba(43,42,37,0.05)]">
+        <div className="flex-1 min-w-0 flex items-center gap-2 px-4">
+          <span className="font-mono text-[10px] text-inkDim whitespace-nowrap flex-shrink-0">주인</span>
+          <input
+            type="text"
+            placeholder="이름"
+            value={ownerName}
+            onChange={(e) => setOwnerName(e.target.value)}
+            className="flex-1 min-w-0 bg-transparent outline-none text-sm"
+          />
+        </div>
+        <div className="flex-1 min-w-0 flex items-center gap-2 px-4 border-l border-line">
+          <span className="font-mono text-[10px] text-inkDim whitespace-nowrap flex-shrink-0">고양이</span>
+          <input
+            type="text"
+            placeholder="이름"
+            value={catName}
+            onChange={(e) => setCatName(e.target.value)}
+            className="flex-1 min-w-0 bg-transparent outline-none text-sm"
+          />
+        </div>
+        <button
+          onClick={startJourney}
+          className="bg-forest text-cream rounded-full px-6 py-3 text-[13px] font-bold whitespace-nowrap flex-shrink-0 hover:bg-forestDeep transition-colors"
+        >
+          운세 보기
+        </button>
+      </div>
+
+      {/* Community teaser */}
+      <div className="flex justify-between items-baseline mb-6">
+        <h2 className="font-serif text-2xl text-forest">오늘 우리 커뮤니티에서는</h2>
+        <Link href="/catstar" className="text-[12.5px] text-inkDim hover:text-forest">
+          CatStar 더보기 →
+        </Link>
+      </div>
+      <Link href="/catstar" className="grid grid-cols-2 md:grid-cols-4 gap-5">
+        {communityPosts.map((p, i) => (
+          <div
+            key={i}
+            className="bg-paper border border-line rounded-2xl p-3 pb-4 hover:-translate-y-1 hover:-rotate-1 transition-transform"
+          >
+            <div className={`aspect-square rounded-lg mb-3 flex items-center justify-center text-2xl bg-gradient-to-br ${p.cls}`}>
+              {p.emoji}
+            </div>
+            <p className="text-xs font-bold mb-0.5">{p.cap}</p>
+            <p className="text-[10.5px] text-inkDim">{p.who}</p>
+          </div>
+        ))}
+      </Link>
     </main>
   );
 }

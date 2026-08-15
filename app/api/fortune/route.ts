@@ -13,21 +13,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '생년월일을 입력해주세요.' }, { status: 400 });
     }
 
+    const isTarot = typeof birthDate === 'string' && birthDate.startsWith('tarot-');
+    const subject = isTarot
+      ? '방금 카드 한 장을 뽑은 사람'
+      : `생년월일 ${birthDate}인 사람`;
+
     // unlocked=false 일 때는 짧은 미리보기만, true일 때는 전체 운세 생성
     const prompt = unlocked
-      ? `당신은 신비로운 고양이 운세 마스터입니다. 생년월일 ${birthDate}인 사람을 위한
+      ? `당신은 신비로운 고양이 운세 마스터입니다. ${subject}을 위한
 오늘의 상세한 고양이 운세를 작성해주세요. 다음 항목을 포함해서 400자 내외로 작성하세요:
 - 오늘의 총운
 - 애정운
 - 재물운
 - 행운의 고양이 조언 한 마디
 따뜻하고 위트있는 톤으로, 고양이 관점에서 이야기하듯 작성해주세요.`
-      : `당신은 신비로운 고양이 운세 마스터입니다. 생년월일 ${birthDate}인 사람을 위한
+      : `당신은 신비로운 고양이 운세 마스터입니다. ${subject}을 위한
 오늘의 운세를 딱 2문장으로만 미리보기처럼 짧게 작성해주세요. 궁금증을 유발하되
 핵심 내용(재물운, 애정운 등 구체적인 부분)은 알려주지 마세요.`;
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 500,
       messages: [{ role: 'user', content: prompt }],
     });

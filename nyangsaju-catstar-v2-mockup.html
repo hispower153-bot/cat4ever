@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>냥사주 — CatStar v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&family=Noto+Sans+KR:wght@400;500;700&family=Fraunces:ital,wght@1,400;1,500&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream:#F6F1E4; --paper:#FFFCF4; --forest:#2F4A3C; --forest-deep:#1F3129;
+    --sage:#7C8B6F; --gold:#C9A227; --gold-soft:#E0C169; --rust:#A85C32;
+    --ink:#2B2A25; --ink-dim:#6B6455; --line:rgba(43,42,37,0.12);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--cream); font-family:'Noto Sans KR',sans-serif; color:var(--ink); }
+  .page { max-width:460px; margin:0 auto; padding:0 20px 90px; }
+
+  nav { display:flex; align-items:center; justify-content:space-between; padding:26px 0 4px; }
+  .back-btn { width:34px; height:34px; border-radius:50%; border:1px solid var(--line); background:var(--paper);
+    display:flex; align-items:center; justify-content:center; color:var(--ink-dim); font-size:15px; cursor:pointer; }
+  .compose-btn { width:34px; height:34px; border-radius:50%; background:var(--rust); color:#FBF3E8;
+    display:flex; align-items:center; justify-content:center; font-size:17px; cursor:pointer; border:none; }
+
+  .head { padding:22px 0 20px; }
+  .head .eyebrow { font-family:'Fraunces',serif; font-style:italic; font-size:12px; letter-spacing:2.5px; color:var(--rust); margin:0 0 10px; }
+  .head h1 { font-family:'Noto Serif KR',serif; font-size:22px; margin:0 0 6px; color:var(--forest); }
+  .head p { font-size:12.5px; color:var(--ink-dim); margin:0; }
+
+  .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:16px; }
+  .post-card { background:var(--paper); border:1px solid var(--line); border-radius:16px; overflow:hidden;
+    cursor:pointer; transition:transform .2s ease; box-shadow: 0 8px 20px rgba(43,42,37,0.05); }
+  .post-card:hover { transform: translateY(-3px) rotate(-0.5deg); }
+  .post-card .thumb { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:30px; }
+  .post-card .meta { padding:12px 12px 14px; }
+  .post-card .meta .cat-tag { font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--rust); margin:0 0 4px; }
+  .post-card .meta .title { font-size:12.5px; font-weight:700; margin:0 0 6px; color:var(--ink);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .post-card .meta .likes { font-size:10.5px; color:var(--ink-dim); display:flex; align-items:center; gap:4px; }
+
+  .fab { position:fixed; bottom:26px; left:50%; transform:translateX(-50%); max-width:460px; width:calc(100% - 40px); }
+  .fab button { width:100%; background:var(--rust); color:#FBF3E8; border:none; border-radius:999px;
+    padding:15px; font-size:13.5px; font-weight:700; cursor:pointer; box-shadow: 0 10px 24px rgba(168,92,50,0.32); }
+
+  .detail-overlay { display:none; position:fixed; inset:0; background:rgba(43,42,37,0.85); z-index:20; overflow-y:auto; }
+  .detail-overlay.open { display:block; }
+  .detail-wrap { max-width:460px; margin:0 auto; padding:20px 20px 60px; }
+  .detail-close { width:34px; height:34px; border-radius:50%; border:1px solid var(--line); background:var(--paper);
+    display:flex; align-items:center; justify-content:center; color:var(--ink-dim); font-size:15px; cursor:pointer; margin-bottom:18px; }
+  .detail-photo { aspect-ratio:1; border-radius:18px; margin-bottom:16px; display:flex; align-items:center; justify-content:center; font-size:46px; }
+  .detail-owner { display:flex; align-items:center; gap:10px; margin-bottom:14px; background:var(--paper);
+    padding:10px 14px; border-radius:14px; }
+  .detail-owner .avatar { width:34px; height:34px; border-radius:50%; background:var(--cream);
+    border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:14px; }
+  .detail-owner .who { font-size:12.5px; } .detail-owner .who b { color:var(--forest); }
+  .detail-owner .who span { color:var(--ink-dim); display:block; font-size:10.5px; }
+  .detail-wrap h2 { font-family:'Noto Serif KR',serif; font-size:18px; margin:0 0 10px; color:var(--forest); }
+  .detail-wrap p.body { font-size:13.5px; line-height:1.8; color:var(--ink); margin:0 0 20px; background:var(--paper);
+    padding: 16px; border-radius: 14px; }
+  .detail-actions { display:flex; gap:16px; font-size:13px; color:var(--ink-dim); }
+  .detail-actions span { display:flex; align-items:center; gap:5px; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <nav>
+    <div class="back-btn" onclick="location.href='nyangsaju-home-v2-mockup.html'">←</div>
+    <div style="font-family:'Noto Serif KR',serif; font-weight:900; font-size:15px; color:var(--forest);">CatStar</div>
+    <button class="compose-btn" onclick="location.href='nyangsaju-login-v2-mockup.html'">+</button>
+  </nav>
+
+  <div class="head">
+    <p class="eyebrow">CATSTAR · TODAY'S CATS</p>
+    <h1>오늘, 우리 냥이들</h1>
+    <p>전국 집사들이 남긴 오늘의 순간들</p>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="fab"><button onclick="location.href='nyangsaju-login-v2-mockup.html'">+ 오늘의 나비 기록하기</button></div>
+</div>
+
+<div class="detail-overlay" id="detailOverlay">
+  <div class="detail-wrap">
+    <div class="detail-close" onclick="closeDetail()">✕</div>
+    <div class="detail-photo" id="detailPhoto">🐱</div>
+    <div class="detail-owner">
+      <div class="avatar">🐾</div>
+      <div class="who"><b id="detailCat">나비</b><span id="detailOwner">혜영 집사</span></div>
+    </div>
+    <h2 id="detailTitle">창가 명상 중</h2>
+    <p class="body" id="detailBody"></p>
+    <div class="detail-actions">
+      <span onclick="location.href='nyangsaju-login-v2-mockup.html'">♡ 24</span>
+      <span onclick="location.href='nyangsaju-login-v2-mockup.html'">💬 5</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const bgs = [
+  'linear-gradient(150deg,#D9C89A,#B8965A)','linear-gradient(150deg,#A8B896,#6F8259)',
+  'linear-gradient(150deg,#C9A8A0,#A8695C)','linear-gradient(150deg,#A0B8C0,#5C8299)',
+  'linear-gradient(150deg,#D2B48C,#8B6F47)','linear-gradient(150deg,#B8A8C9,#6F5C82)'
+];
+const posts = [
+  { emoji:'🐱', cat:'나비', title:'창가 명상 중', owner:'혜영 집사', body:'오늘도 나비는 오후 내내 창가에 앉아 새를 구경했어요. 세상 진지한 눈빛이 너무 귀여워서 한참을 지켜봤네요.', likes:24 },
+  { emoji:'😺', cat:'두부', title:'간식 쟁탈전', owner:'준영 집사', body:'참치 캔 따는 소리만 들으면 세상 빠르게 달려오는 두부. 오늘도 승리했어요.', likes:41 },
+  { emoji:'🐾', cat:'콩이', title:'박스가 최고야', owner:'수민 집사', body:'택배 박스만 보이면 어김없이 들어가서 안 나오는 콩이. 오늘의 자리도 완벽하게 세팅됐어요.', likes:18 },
+  { emoji:'🐈', cat:'모카', title:'낮잠 3시간째', owner:'지훈 집사', body:'모카는 오늘 유독 잠이 많은 하루였어요. 배가 볼록해서 더 귀엽습니다.', likes:33 },
+  { emoji:'🐈‍⬛', cat:'치즈', title:'첫 외출', owner:'유진 집사', body:'처음으로 캐리어 밖에서 산책을 시도해봤어요. 조심스럽지만 씩씩하게 걸었답니다.', likes:52 },
+  { emoji:'😻', cat:'루비', title:'집사 무릎 점령', owner:'서연 집사', body:'노트북 하는 내내 무릎 위에서 안 내려가는 루비. 일은 못했지만 행복했어요.', likes:29 },
+];
+const grid = document.getElementById('grid');
+posts.forEach((p,i) => {
+  const card = document.createElement('div');
+  card.className = 'post-card';
+  card.innerHTML = `<div class="thumb" style="background:${bgs[i]}">${p.emoji}</div>
+    <div class="meta"><p class="cat-tag">${p.cat}</p><p class="title">${p.title}</p><p class="likes">♡ ${p.likes}</p></div>`;
+  card.addEventListener('click', () => openDetail(p, bgs[i]));
+  grid.appendChild(card);
+});
+function openDetail(p, bg) {
+  document.getElementById('detailPhoto').style.background = bg;
+  document.getElementById('detailPhoto').textContent = p.emoji;
+  document.getElementById('detailCat').textContent = p.cat;
+  document.getElementById('detailOwner').textContent = p.owner;
+  document.getElementById('detailTitle').textContent = p.title;
+  document.getElementById('detailBody').textContent = p.body;
+  document.getElementById('detailOverlay').classList.add('open');
+}
+function closeDetail() { document.getElementById('detailOverlay').classList.remove('open'); }
+</script>
+</body>
+</html>

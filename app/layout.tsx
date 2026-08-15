@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import Nav from '../components/Nav';
+import Footer from '../components/Footer';
+import ToastProvider from '../components/ToastProvider';
 
 export const metadata: Metadata = {
   title: '냥사주 | 고양이 운세',
@@ -13,7 +16,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body className="font-sans">
+        <ToastProvider>
+          <Nav />
+          {children}
+          <Footer />
+        </ToastProvider>
+      </body>
     </html>
   );
 }
