@@ -130,18 +130,18 @@ function ResultContent() {
         </div>
 
         <div className="flex gap-3">
-          <button
-            onClick={() => showToast('냥궁합 페이지는 곧 만나요 ✦')}
+          <Link
+            href="/gunghap"
             className="flex-1 text-center bg-paper border border-line rounded-2xl py-4 text-[12.5px] text-inkDim"
           >
             <span className="block text-base mb-1.5">♡</span>냥궁합 보기
-          </button>
-          <button
-            onClick={() => showToast('띠운세 페이지는 곧 만나요 ✦')}
+          </Link>
+          <Link
+            href="/tti"
             className="flex-1 text-center bg-paper border border-line rounded-2xl py-4 text-[12.5px] text-inkDim"
           >
             <span className="block text-base mb-1.5">爪</span>띠운세 보기
-          </button>
+          </Link>
           <Link
             href="/"
             className="flex-1 text-center bg-paper border border-line rounded-2xl py-4 text-[12.5px] text-inkDim"

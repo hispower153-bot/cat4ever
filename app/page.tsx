@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '../components/ToastProvider';
 
 const miniFeatures = [
-  { key: 'gunghap', icon: '♡', title: '냥궁합', badge: 'bg-pink/20 text-pink', href: null },
+  { key: 'gunghap', icon: '♡', title: '냥궁합', badge: 'bg-pink/20 text-pink', href: '/gunghap' },
   { key: 'tti', icon: '爪', title: '띠운세', badge: 'bg-amber/20 text-amber', href: '/tti' },
   { key: 'star', icon: '✦', title: '별자리', badge: 'bg-violet/20 text-violet', href: '/star' },
 ];
