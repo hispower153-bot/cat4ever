@@ -6,9 +6,9 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '../components/ToastProvider';
 
 const miniFeatures = [
-  { key: 'gunghap', icon: '♡', title: '냥궁합', badge: 'bg-pink/20 text-pink' },
-  { key: 'tti', icon: '爪', title: '띠운세', badge: 'bg-amber/20 text-amber' },
-  { key: 'star', icon: '✦', title: '별자리', badge: 'bg-violet/20 text-violet' },
+  { key: 'gunghap', icon: '♡', title: '냥궁합', badge: 'bg-pink/20 text-pink', href: null },
+  { key: 'tti', icon: '爪', title: '띠운세', badge: 'bg-amber/20 text-amber', href: '/tti' },
+  { key: 'star', icon: '✦', title: '별자리', badge: 'bg-violet/20 text-violet', href: '/star' },
 ];
 
 const communityPosts = [
@@ -85,18 +85,31 @@ export default function HomePage() {
         </Link>
 
         <div className="flex flex-row md:flex-col gap-2 h-full">
-          {miniFeatures.map((m) => (
-            <button
-              key={m.key}
-              onClick={() => showToast(`${m.title} 페이지는 곧 만나요 ✦`)}
-              className="flex-1 bg-gradient-to-br from-forest to-forestDeep border border-cream/10 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-[0_6px_14px_rgba(31,49,41,0.18)] hover:-translate-y-1 transition-transform p-1"
-            >
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${m.badge}`}>
-                {m.icon}
-              </span>
-              <span className="text-[8px] font-bold text-cream">{m.title}</span>
-            </button>
-          ))}
+          {miniFeatures.map((m) =>
+            m.href ? (
+              <Link
+                key={m.key}
+                href={m.href}
+                className="flex-1 bg-gradient-to-br from-forest to-forestDeep border border-cream/10 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-[0_6px_14px_rgba(31,49,41,0.18)] hover:-translate-y-1 transition-transform p-1"
+              >
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${m.badge}`}>
+                  {m.icon}
+                </span>
+                <span className="text-[8px] font-bold text-cream">{m.title}</span>
+              </Link>
+            ) : (
+              <button
+                key={m.key}
+                onClick={() => showToast(`${m.title} 페이지는 곧 만나요 ✦`)}
+                className="flex-1 bg-gradient-to-br from-forest to-forestDeep border border-cream/10 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-[0_6px_14px_rgba(31,49,41,0.18)] hover:-translate-y-1 transition-transform p-1"
+              >
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${m.badge}`}>
+                  {m.icon}
+                </span>
+                <span className="text-[8px] font-bold text-cream">{m.title}</span>
+              </button>
+            )
+          )}
         </div>
       </div>
 
