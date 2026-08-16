@@ -118,7 +118,7 @@ function SajuTaroContent() {
 
   const handlePayError = (message: string) => setError(message);
 
-  const handleUnlock = async () => {
+  const handleUnlock = async (orderId: string) => {
     setLoadingFull(true);
     setError('');
     setUnlocked(true);
@@ -128,8 +128,8 @@ function SajuTaroContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
           mode === 'saju'
-            ? { saju: sajuPayload(), catName, unlocked: true }
-            : { birthDate: `tarot-${pickedCard}`, catName, unlocked: true }
+            ? { saju: sajuPayload(), catName, unlocked: true, paymentId: orderId }
+            : { birthDate: `tarot-${pickedCard}`, catName, unlocked: true, paymentId: orderId }
         ),
       });
       const data = await res.json();

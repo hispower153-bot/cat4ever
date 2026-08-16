@@ -32,7 +32,7 @@ create table if not exists fortunes (
   paid boolean default false,
   payment_id text,
   created_at timestamptz default now(),
-  unique (saju_key, fortune_date)
+  unique (saju_key, fortune_date, type)
 );
 
 -- 4. catstar_posts: 인스타형 피드
@@ -45,6 +45,14 @@ create table if not exists catstar_posts (
   image_url text,
   likes_count int default 0,
   created_at timestamptz default now()
+);
+
+-- 4b. catstar_likes: 좋아요 (한 사람이 같은 글에 중복으로 못 누르게 unique)
+create table if not exists catstar_likes (
+  post_id uuid references catstar_posts(id) on delete cascade,
+  owner_id uuid references profiles(id) on delete cascade,
+  created_at timestamptz default now(),
+  primary key (post_id, owner_id)
 );
 
 -- 5. qna_questions / qna_answers
@@ -86,6 +94,7 @@ alter table profiles enable row level security;
 alter table cats enable row level security;
 alter table fortunes enable row level security;
 alter table catstar_posts enable row level security;
+alter table catstar_likes enable row level security;
 alter table qna_questions enable row level security;
 alter table qna_answers enable row level security;
 alter table comu_posts enable row level security;
@@ -102,13 +111,18 @@ create policy "users can insert own cats" on cats for insert with check (auth.ui
 create policy "users can update own cats" on cats for update using (auth.uid() = owner_id);
 create policy "users can delete own cats" on cats for delete using (auth.uid() = owner_id);
 
--- fortunes: 조회는 공개(캐시 재사용), 쓰기는 서버(service role)에서만 — 별도 insert 정책 없음
+-- fortunes: 조회는 공개(캐시 재사용, 나중에 타로 컬렉션 등에도 활용 가능), 쓰기는 서버(service role)에서만
+create policy "fortunes are viewable by everyone" on fortunes for select using (true);
 
 -- catstar_posts: 열람 공개, 작성/수정/삭제는 본인만
 create policy "catstar posts are viewable by everyone" on catstar_posts for select using (true);
 create policy "users can insert own catstar posts" on catstar_posts for insert with check (auth.uid() = owner_id);
 create policy "users can update own catstar posts" on catstar_posts for update using (auth.uid() = owner_id);
 create policy "users can delete own catstar posts" on catstar_posts for delete using (auth.uid() = owner_id);
+
+create policy "catstar likes are viewable by everyone" on catstar_likes for select using (true);
+create policy "users can like as themselves" on catstar_likes for insert with check (auth.uid() = owner_id);
+create policy "users can unlike their own like" on catstar_likes for delete using (auth.uid() = owner_id);
 
 -- qna: 열람 공개, 작성/수정/삭제는 본인만
 create policy "qna questions are viewable by everyone" on qna_questions for select using (true);

@@ -39,32 +39,73 @@ export default function CatStarPage() {
   const [posts, setPosts] = useState<Post[]>(mockPosts);
   const [usingMock, setUsingMock] = useState(true);
   const [selected, setSelected] = useState<Post | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
     const supabase = createClient();
 
-    supabase
-      .from('catstar_posts')
-      .select('id, title, content, image_url, created_at, profiles(owner_name), cats(name)')
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (error || !data) return;
-        const mapped: Post[] = data.map((p: any, i: number) => ({
-          id: p.id,
-          emoji: emojis[i % emojis.length],
-          cat: p.cats?.name || p.profiles?.owner_name || '이름 없는 냥이',
-          title: p.title,
-          owner: p.profiles?.owner_name || '익명 집사',
-          body: p.content || '',
-          likes: 0,
-          gradient: gradients[i % gradients.length],
-          imageUrl: p.image_url,
-        }));
-        setPosts(mapped);
-        setUsingMock(false);
+    const load = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      setUserId(userData.user?.id || null);
+
+      const { data, error } = await supabase
+        .from('catstar_posts')
+        .select('id, title, content, image_url, created_at, profiles(owner_name), cats(name)')
+        .order('created_at', { ascending: false });
+      if (error || !data) return;
+
+      const { data: likeRows } = await supabase.from('catstar_likes').select('post_id, owner_id');
+      const counts: Record<string, number> = {};
+      const myLikes = new Set<string>();
+      (likeRows || []).forEach((l: any) => {
+        counts[l.post_id] = (counts[l.post_id] || 0) + 1;
+        if (userData.user && l.owner_id === userData.user.id) myLikes.add(l.post_id);
       });
+      setLikedIds(myLikes);
+
+      const mapped: Post[] = data.map((p: any, i: number) => ({
+        id: p.id,
+        emoji: emojis[i % emojis.length],
+        cat: p.cats?.name || p.profiles?.owner_name || '이름 없는 냥이',
+        title: p.title,
+        owner: p.profiles?.owner_name || '익명 집사',
+        body: p.content || '',
+        likes: counts[p.id] || 0,
+        gradient: gradients[i % gradients.length],
+        imageUrl: p.image_url,
+      }));
+      setPosts(mapped);
+      setUsingMock(false);
+    };
+
+    load();
   }, []);
+
+  const toggleLike = async (post: Post) => {
+    if (!post.id) return;
+    if (!userId) {
+      window.location.href = '/login';
+      return;
+    }
+    const supabase = createClient();
+    const isLiked = likedIds.has(post.id);
+
+    if (isLiked) {
+      await supabase.from('catstar_likes').delete().eq('post_id', post.id).eq('owner_id', userId);
+    } else {
+      await supabase.from('catstar_likes').insert({ post_id: post.id, owner_id: userId });
+    }
+
+    const nextLiked = new Set(likedIds);
+    isLiked ? nextLiked.delete(post.id) : nextLiked.add(post.id);
+    setLikedIds(nextLiked);
+
+    const delta = isLiked ? -1 : 1;
+    setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, likes: p.likes + delta } : p)));
+    setSelected((prev) => (prev && prev.id === post.id ? { ...prev, likes: prev.likes + delta } : prev));
+  };
 
   return (
     <main className="max-w-site mx-auto px-8 pb-20">
@@ -108,7 +149,9 @@ export default function CatStarPage() {
             <div className="p-3.5">
               <p className="font-mono text-[10px] text-rust mb-1">{p.cat}</p>
               <p className="text-[13.5px] font-bold mb-1.5 truncate">{p.title}</p>
-              <p className="text-[11px] text-inkDim">♡ {p.likes}</p>
+              <p className="text-[11px] text-inkDim">
+                {likedIds.has(p.id || '') ? '♥' : '♡'} {p.likes}
+              </p>
             </div>
           </button>
         ))}
@@ -151,7 +194,12 @@ export default function CatStarPage() {
             <h2 className="font-serif text-xl text-forest mb-3">{selected.title}</h2>
             <p className="text-sm leading-[1.85] bg-paper p-4.5 rounded-2xl mb-5">{selected.body}</p>
             <div className="flex gap-4.5 text-[13.5px] text-inkDim">
-              <Link href="/login">♡ {selected.likes}</Link>
+              <button
+                onClick={() => toggleLike(selected)}
+                className={likedIds.has(selected.id || '') ? 'text-rust font-bold' : ''}
+              >
+                {likedIds.has(selected.id || '') ? '♥' : '♡'} {selected.likes}
+              </button>
               <Link href="/login">💬 5</Link>
             </div>
           </div>

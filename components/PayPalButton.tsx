@@ -9,7 +9,7 @@ declare global {
 }
 
 type Props = {
-  onSuccess: () => void;
+  onSuccess: (orderId: string) => void;
   onError: (message: string) => void;
 };
 
@@ -49,7 +49,7 @@ export default function PayPalButton({ onSuccess, onError }: Props) {
             });
             const result = await res.json();
             if (result.success) {
-              onSuccess();
+              onSuccess(data.orderID);
             } else {
               onError(result.error || '결제 확인에 실패했습니다.');
             }

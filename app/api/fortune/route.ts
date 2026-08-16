@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getSajuSummary, getTodaySummary } from '@/lib/saju';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -20,17 +21,25 @@ type RequestBody = {
   };
   catName?: string;
   unlocked: boolean;
+  paymentId?: string;
 };
+
+function todayDateString() {
+  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+}
 
 export async function POST(req: NextRequest) {
   try {
     const body: RequestBody = await req.json();
-    const { unlocked, catName } = body;
+    const { unlocked, catName, paymentId } = body;
     const displayName = catName || '이 고양이';
 
+    let type: 'saju' | 'tarot';
+    let sajuKey: string;
     let subject: string;
 
     if (body.saju) {
+      type = 'saju';
       // 1단계: 결정론적 계산 (LLM이 아니라 라이브러리가 사주팔자를 계산)
       let sajuInfo;
       try {
@@ -42,15 +51,41 @@ export async function POST(req: NextRequest) {
         );
       }
       const today = getTodaySummary();
+      sajuKey = sajuInfo.pillarString; // 같은 명식이면 항상 같은 키 → 캐시 재사용
 
       subject = `${displayName}(사주 명식: ${sajuInfo.pillarString} / 오행 분포: ${sajuInfo.elementSummary})를 위한.
 오늘(${new Date().toLocaleDateString('ko-KR')})의 일진 오행은 ${today.elementSummary}이며,
 이 고양이의 일간(핵심 기운)은 ${sajuInfo.dayElement.stem} 기운입니다.
 이 사주 명식과 오늘 일진의 오행 관계(상생·상극)를 참고해서`;
     } else if (body.birthDate?.startsWith('tarot-')) {
+      type = 'tarot';
+      sajuKey = body.birthDate; // 'tarot-3' 형식 — 같은 카드면 같은 키
       subject = `${displayName}가 방금 뽑은 타로 카드를 위한`;
     } else {
       return NextResponse.json({ error: '생년월일 정보가 필요합니다.' }, { status: 400 });
+    }
+
+    const fortuneDate = todayDateString();
+    const admin = createAdminClient();
+
+    // 캐시 조회: 같은 사주(또는 같은 타로 카드) + 같은 날짜면 Claude 재호출 없이 재사용
+    if (admin) {
+      const { data: cached } = await admin
+        .from('fortunes')
+        .select('preview_text, full_text')
+        .eq('saju_key', sajuKey)
+        .eq('fortune_date', fortuneDate)
+        .eq('type', type)
+        .maybeSingle();
+
+      if (cached) {
+        if (unlocked && cached.full_text) {
+          return NextResponse.json({ fortune: cached.full_text, cached: true });
+        }
+        if (!unlocked && cached.preview_text) {
+          return NextResponse.json({ fortune: cached.preview_text, cached: true });
+        }
+      }
     }
 
     // 2단계: 계산된 명식을 "재료"로 넘겨서 Claude가 자연어 해석만 생성
@@ -75,6 +110,20 @@ export async function POST(req: NextRequest) {
 
     const textBlock = message.content.find((b) => b.type === 'text');
     const fortuneText = textBlock && 'text' in textBlock ? textBlock.text : '운세를 불러오지 못했습니다.';
+
+    // 캐시 저장 (다음 사람이 같은 사주/카드로 조회하면 재사용)
+    if (admin) {
+      const upsertData = unlocked
+        ? { full_text: fortuneText, paid: true, payment_id: paymentId || null }
+        : { preview_text: fortuneText };
+
+      await admin
+        .from('fortunes')
+        .upsert(
+          { saju_key: sajuKey, fortune_date: fortuneDate, type, ...upsertData },
+          { onConflict: 'saju_key,fortune_date,type' }
+        );
+    }
 
     return NextResponse.json({ fortune: fortuneText });
   } catch (err) {
