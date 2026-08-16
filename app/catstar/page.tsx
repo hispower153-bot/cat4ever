@@ -38,10 +38,10 @@ export default function CatStarPage() {
           <p className="text-[13px] text-inkDim">전국 집사들이 남긴 오늘의 순간들</p>
         </div>
         <Link
-          href="/login"
+          href="/catstar/new"
           className="bg-rust text-[#FBF3E8] rounded-full px-6 py-3.5 text-[13.5px] font-bold whitespace-nowrap"
         >
-          + 오늘의 나비 기록하기
+          + 오늘의 순간 기록하기
         </Link>
       </div>
 

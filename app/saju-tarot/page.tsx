@@ -22,11 +22,18 @@ function SajuTaroContent() {
   const [birthYear, setBirthYear] = useState('');
   const [birthMonth, setBirthMonth] = useState('');
   const [birthDay, setBirthDay] = useState('');
+  const [birthHour, setBirthHour] = useState('');
+  const [timeUnknown, setTimeUnknown] = useState(false);
+  const hours = Array.from({ length: 24 }, (_, i) => i);
 
-  const birthDate =
-    birthYear && birthMonth && birthDay
-      ? `${birthYear}-${String(birthMonth).padStart(2, '0')}-${String(birthDay).padStart(2, '0')}`
-      : '';
+  const sajuPayload = () => ({
+    year: Number(birthYear),
+    month: Number(birthMonth),
+    day: Number(birthDay),
+    hour: timeUnknown ? undefined : Number(birthHour),
+    minute: 0,
+    timeUnknown,
+  });
 
   // tarot
   const [pickedCard, setPickedCard] = useState<number | null>(null);
@@ -49,8 +56,8 @@ function SajuTaroContent() {
   };
 
   const handleGetPreview = async () => {
-    if (mode === 'saju' && (!birthYear || !birthMonth || !birthDay)) {
-      setError('생년월일을 모두 선택해주세요.');
+    if (mode === 'saju' && (!birthYear || !birthMonth || !birthDay || (!timeUnknown && !birthHour))) {
+      setError('생년월일(시간)을 모두 선택해주세요.');
       return;
     }
     setError('');
@@ -63,7 +70,11 @@ function SajuTaroContent() {
       const res = await fetch('/api/fortune', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ birthDate: mode === 'saju' ? birthDate : `tarot-${pickedCard}`, unlocked: false }),
+        body: JSON.stringify(
+          mode === 'saju'
+            ? { saju: sajuPayload(), catName, unlocked: false }
+            : { birthDate: `tarot-${pickedCard}`, catName, unlocked: false }
+        ),
       });
       const data = await res.json();
       if (data.error) {
@@ -93,7 +104,7 @@ function SajuTaroContent() {
       const res = await fetch('/api/fortune', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ birthDate: `tarot-${i}`, unlocked: false }),
+        body: JSON.stringify({ birthDate: `tarot-${i}`, catName, unlocked: false }),
       });
       const data = await res.json();
       if (data.error) setError(data.error);
@@ -115,10 +126,11 @@ function SajuTaroContent() {
       const res = await fetch('/api/fortune', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          birthDate: mode === 'saju' ? birthDate : `tarot-${pickedCard}`,
-          unlocked: true,
-        }),
+        body: JSON.stringify(
+          mode === 'saju'
+            ? { saju: sajuPayload(), catName, unlocked: true }
+            : { birthDate: `tarot-${pickedCard}`, catName, unlocked: true }
+        ),
       });
       const data = await res.json();
       if (data.error) {
@@ -215,6 +227,30 @@ function SajuTaroContent() {
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>
+            </div>
+
+            <p className="font-mono text-[10.5px] tracking-[1.5px] text-inkDim uppercase mb-3 mt-5">태어난 시간</p>
+            <div className="flex items-center justify-between gap-3.5">
+              <select
+                value={birthHour}
+                onChange={(e) => setBirthHour(e.target.value)}
+                disabled={timeUnknown}
+                className="flex-1 bg-cream border border-line rounded-xl font-mono text-sm py-3 px-2 text-center disabled:opacity-35"
+              >
+                <option value="">시</option>
+                {hours.map((h) => (
+                  <option key={h} value={h}>{String(h).padStart(2, '0')}시</option>
+                ))}
+              </select>
+              <label className="flex items-center gap-1.5 text-xs text-inkDim whitespace-nowrap cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={timeUnknown}
+                  onChange={(e) => setTimeUnknown(e.target.checked)}
+                  className="accent-rust"
+                />
+                시간 모름
+              </label>
             </div>
             <button
               onClick={handleGetPreview}
