@@ -1,12 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { isSupabaseConfigured } from '@/lib/supabase/isConfigured';
+import { useToast } from '@/components/ToastProvider';
 
-type Answer = { who: string; body: string };
-type Question = { title: string; owner: string; snippet: string; status: 'waiting' | 'answered'; answers: Answer[] };
+type Answer = { id?: string; who: string; body: string };
+type Question = {
+  id?: string;
+  title: string;
+  owner: string;
+  snippet: string;
+  status: 'waiting' | 'answered';
+  answers: Answer[];
+};
 
-const questions: Question[] = [
+const mockQuestions: Question[] = [
   {
     title: '사료 바꿔도 될까요?',
     owner: '혜영 집사',
@@ -45,7 +55,79 @@ const questions: Question[] = [
 ];
 
 export default function QnaPage() {
+  const { showToast } = useToast();
+  const [questions, setQuestions] = useState<Question[]>(mockQuestions);
+  const [usingMock, setUsingMock] = useState(true);
   const [selected, setSelected] = useState<Question | null>(null);
+  const [answerText, setAnswerText] = useState('');
+  const [submittingAnswer, setSubmittingAnswer] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    const supabase = createClient();
+
+    supabase.auth.getUser().then(({ data }) => setIsLoggedIn(!!data.user));
+
+    const loadQuestions = async () => {
+      const { data: qRows, error: qErr } = await supabase
+        .from('qna_questions')
+        .select('id, title, content, created_at, profiles(owner_name)')
+        .order('created_at', { ascending: false });
+
+      if (qErr || !qRows) return; // 테이블이 아직 없거나 조회 실패 시 목업 유지
+
+      const { data: aRows } = await supabase
+        .from('qna_answers')
+        .select('id, question_id, content, created_at, profiles(owner_name)')
+        .order('created_at', { ascending: true });
+
+      const mapped: Question[] = qRows.map((q: any) => {
+        const answers = (aRows || [])
+          .filter((a: any) => a.question_id === q.id)
+          .map((a: any) => ({ id: a.id, who: a.profiles?.owner_name || '익명 집사', body: a.content }));
+        return {
+          id: q.id,
+          title: q.title,
+          owner: q.profiles?.owner_name || '익명 집사',
+          snippet: q.content || '',
+          status: answers.length > 0 ? 'answered' : 'waiting',
+          answers,
+        };
+      });
+
+      setQuestions(mapped);
+      setUsingMock(false);
+    };
+
+    loadQuestions();
+  }, []);
+
+  const handleSubmitAnswer = async () => {
+    if (!answerText.trim() || !selected?.id) return;
+    if (!isLoggedIn) {
+      window.location.href = '/login';
+      return;
+    }
+    setSubmittingAnswer(true);
+    const supabase = createClient();
+    const { data: userData } = await supabase.auth.getUser();
+    const { error } = await supabase.from('qna_answers').insert({
+      question_id: selected.id,
+      owner_id: userData.user!.id,
+      content: answerText,
+    });
+    setSubmittingAnswer(false);
+    if (error) {
+      showToast('답변 등록 중 문제가 발생했어요.');
+      return;
+    }
+    showToast('답변이 등록됐어요 🐾');
+    setAnswerText('');
+    setSelected(null);
+    // 최신 데이터 다시 불러오기
+    window.location.reload();
+  };
 
   return (
     <main className="max-w-site mx-auto px-8 pb-20">
@@ -61,17 +143,23 @@ export default function QnaPage() {
       </div>
       <div className="flex justify-end -mt-6 mb-6">
         <Link
-          href="/login"
+          href="/qna/new"
           className="bg-sage text-[#FBF3E8] rounded-full px-5 py-2.5 text-[13px] font-bold"
         >
           + 질문하기
         </Link>
       </div>
 
+      {usingMock && (
+        <p className="text-center text-[11px] text-inkDim mb-6 max-w-read mx-auto">
+          (Supabase 연결 전이라 예시 데이터를 보여드리고 있어요)
+        </p>
+      )}
+
       <div className="max-w-read mx-auto">
         {questions.map((q, i) => (
           <button
-            key={i}
+            key={q.id || i}
             onClick={() => setSelected(q)}
             className="w-full text-left bg-paper border border-line rounded-2xl p-6 mb-3.5 shadow-[0_6px_18px_rgba(43,42,37,0.04)]"
           >
@@ -89,6 +177,11 @@ export default function QnaPage() {
             <p className="text-[11.5px] text-inkDim">{q.owner}</p>
           </button>
         ))}
+        {questions.length === 0 && (
+          <p className="text-center text-inkDim text-sm py-10">
+            아직 등록된 질문이 없어요. 첫 질문을 남겨보세요!
+          </p>
+        )}
       </div>
 
       {selected && (
@@ -116,7 +209,7 @@ export default function QnaPage() {
                 </div>
               ) : (
                 selected.answers.map((a, i) => (
-                  <div key={i} className="bg-paper border border-line rounded-2xl p-4 mb-3">
+                  <div key={a.id || i} className="bg-paper border border-line rounded-2xl p-4 mb-3">
                     <p className="text-[11.5px] font-bold text-sage mb-1.5">{a.who}</p>
                     <p className="text-[13.5px] leading-relaxed">{a.body}</p>
                   </div>
@@ -124,18 +217,23 @@ export default function QnaPage() {
               )}
             </div>
             <div className="flex gap-2">
-              <Link
-                href="/login"
-                className="flex-1 bg-paper border border-line rounded-full px-4.5 py-3.5 text-[13.5px] text-inkDim"
-              >
-                답변을 남겨보세요
-              </Link>
-              <Link
-                href="/login"
-                className="bg-sage text-[#FBF3E8] rounded-full px-5.5 py-0 flex items-center text-[13.5px] font-bold"
+              <input
+                type="text"
+                value={answerText}
+                onChange={(e) => setAnswerText(e.target.value)}
+                onFocus={() => {
+                  if (!isLoggedIn) window.location.href = '/login';
+                }}
+                placeholder="답변을 남겨보세요"
+                className="flex-1 bg-paper border border-line rounded-full px-4.5 py-3.5 text-[13.5px] outline-none"
+              />
+              <button
+                onClick={handleSubmitAnswer}
+                disabled={submittingAnswer}
+                className="bg-sage text-[#FBF3E8] rounded-full px-5.5 text-[13.5px] font-bold disabled:opacity-50"
               >
                 등록
-              </Link>
+              </button>
             </div>
           </div>
         </div>

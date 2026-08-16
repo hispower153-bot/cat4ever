@@ -1,9 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { isSupabaseConfigured } from '@/lib/supabase/isConfigured';
 
 type Post = {
+  id?: string;
   emoji: string;
   cat: string;
   title: string;
@@ -13,7 +16,14 @@ type Post = {
   gradient: string;
 };
 
-const posts: Post[] = [
+const gradients = [
+  'from-[#D9C89A] to-[#B8965A]', 'from-[#A8B896] to-[#6F8259]',
+  'from-[#C9A8A0] to-[#A8695C]', 'from-[#A0B8C0] to-[#5C8299]',
+  'from-[#D2B48C] to-[#8B6F47]', 'from-[#B8A8C9] to-[#6F5C82]',
+];
+const emojis = ['🐱', '😺', '🐾', '🐈', '🐈‍⬛', '😻', '😸'];
+
+const mockPosts: Post[] = [
   { emoji: '🐱', cat: '나비', title: '창가 명상 중', owner: '혜영 집사', body: '오늘도 나비는 오후 내내 창가에 앉아 새를 구경했어요. 세상 진지한 눈빛이 너무 귀여워서 한참을 지켜봤네요.', likes: 24, gradient: 'from-[#D9C89A] to-[#B8965A]' },
   { emoji: '😺', cat: '두부', title: '간식 쟁탈전', owner: '준영 집사', body: '참치 캔 따는 소리만 들으면 세상 빠르게 달려오는 두부. 오늘도 승리했어요.', likes: 41, gradient: 'from-[#A8B896] to-[#6F8259]' },
   { emoji: '🐾', cat: '콩이', title: '박스가 최고야', owner: '수민 집사', body: '택배 박스만 보이면 어김없이 들어가서 안 나오는 콩이. 오늘의 자리도 완벽하게 세팅됐어요.', likes: 18, gradient: 'from-[#C9A8A0] to-[#A8695C]' },
@@ -25,7 +35,34 @@ const posts: Post[] = [
 ];
 
 export default function CatStarPage() {
+  const [posts, setPosts] = useState<Post[]>(mockPosts);
+  const [usingMock, setUsingMock] = useState(true);
   const [selected, setSelected] = useState<Post | null>(null);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    const supabase = createClient();
+
+    supabase
+      .from('catstar_posts')
+      .select('id, title, content, created_at, profiles(owner_name), cats(name)')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (error || !data) return;
+        const mapped: Post[] = data.map((p: any, i: number) => ({
+          id: p.id,
+          emoji: emojis[i % emojis.length],
+          cat: p.cats?.name || p.profiles?.owner_name || '이름 없는 냥이',
+          title: p.title,
+          owner: p.profiles?.owner_name || '익명 집사',
+          body: p.content || '',
+          likes: 0,
+          gradient: gradients[i % gradients.length],
+        }));
+        setPosts(mapped);
+        setUsingMock(false);
+      });
+  }, []);
 
   return (
     <main className="max-w-site mx-auto px-8 pb-20">
@@ -45,10 +82,16 @@ export default function CatStarPage() {
         </Link>
       </div>
 
+      {usingMock && (
+        <p className="text-center text-[11px] text-inkDim mb-6">
+          (Supabase 연결 전이라 예시 데이터를 보여드리고 있어요)
+        </p>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
         {posts.map((p, i) => (
           <button
-            key={i}
+            key={p.id || i}
             onClick={() => setSelected(p)}
             className="text-left bg-paper border border-line rounded-2xl overflow-hidden hover:-translate-y-1 transition-transform shadow-[0_8px_20px_rgba(43,42,37,0.05)]"
           >
