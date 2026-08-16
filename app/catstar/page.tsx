@@ -14,6 +14,7 @@ type Post = {
   body: string;
   likes: number;
   gradient: string;
+  imageUrl?: string | null;
 };
 
 const gradients = [
@@ -45,7 +46,7 @@ export default function CatStarPage() {
 
     supabase
       .from('catstar_posts')
-      .select('id, title, content, created_at, profiles(owner_name), cats(name)')
+      .select('id, title, content, image_url, created_at, profiles(owner_name), cats(name)')
       .order('created_at', { ascending: false })
       .then(({ data, error }) => {
         if (error || !data) return;
@@ -58,6 +59,7 @@ export default function CatStarPage() {
           body: p.content || '',
           likes: 0,
           gradient: gradients[i % gradients.length],
+          imageUrl: p.image_url,
         }));
         setPosts(mapped);
         setUsingMock(false);
@@ -95,8 +97,13 @@ export default function CatStarPage() {
             onClick={() => setSelected(p)}
             className="text-left bg-paper border border-line rounded-2xl overflow-hidden hover:-translate-y-1 transition-transform shadow-[0_8px_20px_rgba(43,42,37,0.05)]"
           >
-            <div className={`aspect-square flex items-center justify-center text-[34px] bg-gradient-to-br ${p.gradient}`}>
-              {p.emoji}
+            <div className={`aspect-square flex items-center justify-center text-[34px] bg-gradient-to-br ${p.gradient} overflow-hidden`}>
+              {p.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" />
+              ) : (
+                p.emoji
+              )}
             </div>
             <div className="p-3.5">
               <p className="font-mono text-[10px] text-rust mb-1">{p.cat}</p>
@@ -123,9 +130,14 @@ export default function CatStarPage() {
               ✕
             </button>
             <div
-              className={`aspect-square rounded-[20px] mb-4.5 flex items-center justify-center text-5xl bg-gradient-to-br ${selected.gradient}`}
+              className={`aspect-square rounded-[20px] mb-4.5 flex items-center justify-center text-5xl bg-gradient-to-br ${selected.gradient} overflow-hidden`}
             >
-              {selected.emoji}
+              {selected.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={selected.imageUrl} alt={selected.title} className="w-full h-full object-cover" />
+              ) : (
+                selected.emoji
+              )}
             </div>
             <div className="flex items-center gap-2.5 mb-4 bg-paper p-3 rounded-2xl">
               <div className="w-9 h-9 rounded-full bg-cream border border-line flex items-center justify-center text-sm">

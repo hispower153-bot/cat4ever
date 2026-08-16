@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/ToastProvider';
@@ -22,6 +22,21 @@ export default function CatStarNewPage() {
   const [newCatName, setNewCatName] = useState('');
   const [newCatBirth, setNewCatBirth] = useState('');
   const [savingCat, setSavingCat] = useState(false);
+
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      showToast('사진 용량은 8MB 이하로 올려주세요.');
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
 
   useEffect(() => {
     const supabase = createClient();
@@ -83,11 +98,29 @@ export default function CatStarNewPage() {
       return;
     }
 
+    let imageUrl: string | null = null;
+    if (imageFile) {
+      const ext = imageFile.name.split('.').pop();
+      const path = `${userData.user.id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('catstar-photos')
+        .upload(path, imageFile);
+      if (uploadError) {
+        setSubmitting(false);
+        showToast('사진 업로드 중 문제가 발생했어요.');
+        console.error(uploadError);
+        return;
+      }
+      const { data: publicUrlData } = supabase.storage.from('catstar-photos').getPublicUrl(path);
+      imageUrl = publicUrlData.publicUrl;
+    }
+
     const { error } = await supabase.from('catstar_posts').insert({
       owner_id: userData.user.id,
       cat_id: selectedCatId,
       title,
       content,
+      image_url: imageUrl,
     });
 
     setSubmitting(false);
@@ -110,9 +143,26 @@ export default function CatStarNewPage() {
           <h1 className="font-serif text-2xl text-forest">오늘 우리 냥이는 어땠나요?</h1>
         </div>
 
-        <div className="aspect-video rounded-[20px] border-[1.5px] border-dashed border-line bg-paper flex flex-col items-center justify-center gap-2.5 mb-6 cursor-pointer">
-          <span className="text-3xl text-inkDim">📷</span>
-          <p className="text-[13px] text-inkDim">탭해서 사진 올리기 (다음 단계에서 연결 예정)</p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          className="aspect-video rounded-[20px] border-[1.5px] border-dashed border-line bg-paper flex flex-col items-center justify-center gap-2.5 mb-6 cursor-pointer overflow-hidden relative"
+        >
+          {imagePreview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imagePreview} alt="미리보기" className="w-full h-full object-cover" />
+          ) : (
+            <>
+              <span className="text-3xl text-inkDim">📷</span>
+              <p className="text-[13px] text-inkDim">탭해서 사진 올리기</p>
+            </>
+          )}
         </div>
 
         <p className="font-mono text-[10.5px] tracking-[1.5px] text-inkDim uppercase mb-2.5">어떤 냥이인가요</p>
