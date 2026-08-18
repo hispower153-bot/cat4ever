@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { isSupabaseConfigured } from '@/lib/supabase/isConfigured';
+import { useToast } from '@/components/ToastProvider';
+
+type Comment = { id?: string; who: string; body: string };
 
 type Post = {
   id?: string;
@@ -15,6 +18,7 @@ type Post = {
   likes: number;
   gradient: string;
   imageUrl?: string | null;
+  comments: Comment[];
 };
 
 const gradients = [
@@ -25,62 +29,72 @@ const gradients = [
 const emojis = ['🐱', '😺', '🐾', '🐈', '🐈‍⬛', '😻', '😸'];
 
 const mockPosts: Post[] = [
-  { emoji: '🐱', cat: '나비', title: '창가 명상 중', owner: '혜영 집사', body: '오늘도 나비는 오후 내내 창가에 앉아 새를 구경했어요. 세상 진지한 눈빛이 너무 귀여워서 한참을 지켜봤네요.', likes: 24, gradient: 'from-[#D9C89A] to-[#B8965A]' },
-  { emoji: '😺', cat: '두부', title: '간식 쟁탈전', owner: '준영 집사', body: '참치 캔 따는 소리만 들으면 세상 빠르게 달려오는 두부. 오늘도 승리했어요.', likes: 41, gradient: 'from-[#A8B896] to-[#6F8259]' },
-  { emoji: '🐾', cat: '콩이', title: '박스가 최고야', owner: '수민 집사', body: '택배 박스만 보이면 어김없이 들어가서 안 나오는 콩이. 오늘의 자리도 완벽하게 세팅됐어요.', likes: 18, gradient: 'from-[#C9A8A0] to-[#A8695C]' },
-  { emoji: '🐈', cat: '모카', title: '낮잠 3시간째', owner: '지훈 집사', body: '모카는 오늘 유독 잠이 많은 하루였어요. 배가 볼록해서 더 귀엽습니다.', likes: 33, gradient: 'from-[#A0B8C0] to-[#5C8299]' },
-  { emoji: '🐈‍⬛', cat: '치즈', title: '첫 외출', owner: '유진 집사', body: '처음으로 캐리어 밖에서 산책을 시도해봤어요. 조심스럽지만 씩씩하게 걸었답니다.', likes: 52, gradient: 'from-[#D2B48C] to-[#8B6F47]' },
-  { emoji: '😻', cat: '루비', title: '집사 무릎 점령', owner: '서연 집사', body: '노트북 하는 내내 무릎 위에서 안 내려가는 루비. 일은 못했지만 행복했어요.', likes: 29, gradient: 'from-[#B8A8C9] to-[#6F5C82]' },
-  { emoji: '🐈', cat: '초코', title: '오늘의 캣타워 정복', owner: '민지 집사', body: '새로 산 캣타워 꼭대기까지 단숨에 올라간 초코, 뿌듯한 표정이었어요.', likes: 37, gradient: 'from-[#D9C89A] to-[#8B6F47]' },
-  { emoji: '😸', cat: '별이', title: '식빵 자세 3시간', owner: '재현 집사', body: '미동도 없이 식빵을 굽고 있는 별이, 세상 편안해 보였어요.', likes: 45, gradient: 'from-[#A8B896] to-[#5C8299]' },
+  { emoji: '🐱', cat: '나비', title: '창가 명상 중', owner: '혜영 집사', body: '오늘도 나비는 오후 내내 창가에 앉아 새를 구경했어요. 세상 진지한 눈빛이 너무 귀여워서 한참을 지켜봤네요.', likes: 24, gradient: 'from-[#D9C89A] to-[#B8965A]', comments: [{ who: '준영 집사', body: '너무 귀여워요 ㅠㅠ' }] },
+  { emoji: '😺', cat: '두부', title: '간식 쟁탈전', owner: '준영 집사', body: '참치 캔 따는 소리만 들으면 세상 빠르게 달려오는 두부. 오늘도 승리했어요.', likes: 41, gradient: 'from-[#A8B896] to-[#6F8259]', comments: [] },
+  { emoji: '🐾', cat: '콩이', title: '박스가 최고야', owner: '수민 집사', body: '택배 박스만 보이면 어김없이 들어가서 안 나오는 콩이. 오늘의 자리도 완벽하게 세팅됐어요.', likes: 18, gradient: 'from-[#C9A8A0] to-[#A8695C]', comments: [] },
+  { emoji: '🐈', cat: '모카', title: '낮잠 3시간째', owner: '지훈 집사', body: '모카는 오늘 유독 잠이 많은 하루였어요. 배가 볼록해서 더 귀엽습니다.', likes: 33, gradient: 'from-[#A0B8C0] to-[#5C8299]', comments: [] },
+  { emoji: '🐈‍⬛', cat: '치즈', title: '첫 외출', owner: '유진 집사', body: '처음으로 캐리어 밖에서 산책을 시도해봤어요. 조심스럽지만 씩씩하게 걸었답니다.', likes: 52, gradient: 'from-[#D2B48C] to-[#8B6F47]', comments: [] },
+  { emoji: '😻', cat: '루비', title: '집사 무릎 점령', owner: '서연 집사', body: '노트북 하는 내내 무릎 위에서 안 내려가는 루비. 일은 못했지만 행복했어요.', likes: 29, gradient: 'from-[#B8A8C9] to-[#6F5C82]', comments: [] },
+  { emoji: '🐈', cat: '초코', title: '오늘의 캣타워 정복', owner: '민지 집사', body: '새로 산 캣타워 꼭대기까지 단숨에 올라간 초코, 뿌듯한 표정이었어요.', likes: 37, gradient: 'from-[#D9C89A] to-[#8B6F47]', comments: [] },
+  { emoji: '😸', cat: '별이', title: '식빵 자세 3시간', owner: '재현 집사', body: '미동도 없이 식빵을 굽고 있는 별이, 세상 편안해 보였어요.', likes: 45, gradient: 'from-[#A8B896] to-[#5C8299]', comments: [] },
 ];
 
 export default function CatStarClient() {
+  const { showToast } = useToast();
   const [posts, setPosts] = useState<Post[]>(mockPosts);
   const [usingMock, setUsingMock] = useState(true);
   const [selected, setSelected] = useState<Post | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
+  const [commentText, setCommentText] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
 
-  useEffect(() => {
+  const loadAll = async () => {
     if (!isSupabaseConfigured()) return;
     const supabase = createClient();
+    const { data: userData } = await supabase.auth.getUser();
+    setUserId(userData.user?.id || null);
 
-    const load = async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      setUserId(userData.user?.id || null);
+    const { data, error } = await supabase
+      .from('catstar_posts')
+      .select('id, title, content, image_url, created_at, profiles(owner_name), cats(name)')
+      .order('created_at', { ascending: false });
+    if (error || !data) return;
 
-      const { data, error } = await supabase
-        .from('catstar_posts')
-        .select('id, title, content, image_url, created_at, profiles(owner_name), cats(name)')
-        .order('created_at', { ascending: false });
-      if (error || !data) return;
+    const { data: likeRows } = await supabase.from('catstar_likes').select('post_id, owner_id');
+    const counts: Record<string, number> = {};
+    const myLikes = new Set<string>();
+    (likeRows || []).forEach((l: any) => {
+      counts[l.post_id] = (counts[l.post_id] || 0) + 1;
+      if (userData.user && l.owner_id === userData.user.id) myLikes.add(l.post_id);
+    });
+    setLikedIds(myLikes);
 
-      const { data: likeRows } = await supabase.from('catstar_likes').select('post_id, owner_id');
-      const counts: Record<string, number> = {};
-      const myLikes = new Set<string>();
-      (likeRows || []).forEach((l: any) => {
-        counts[l.post_id] = (counts[l.post_id] || 0) + 1;
-        if (userData.user && l.owner_id === userData.user.id) myLikes.add(l.post_id);
-      });
-      setLikedIds(myLikes);
+    const { data: commentRows } = await supabase
+      .from('catstar_comments')
+      .select('id, post_id, content, created_at, profiles(owner_name)')
+      .order('created_at', { ascending: true });
 
-      const mapped: Post[] = data.map((p: any, i: number) => ({
-        id: p.id,
-        emoji: emojis[i % emojis.length],
-        cat: p.cats?.name || p.profiles?.owner_name || '이름 없는 냥이',
-        title: p.title,
-        owner: p.profiles?.owner_name || '익명 집사',
-        body: p.content || '',
-        likes: counts[p.id] || 0,
-        gradient: gradients[i % gradients.length],
-        imageUrl: p.image_url,
-      }));
-      setPosts(mapped);
-      setUsingMock(false);
-    };
+    const mapped: Post[] = data.map((p: any, i: number) => ({
+      id: p.id,
+      emoji: emojis[i % emojis.length],
+      cat: p.cats?.name || p.profiles?.owner_name || '이름 없는 냥이',
+      title: p.title,
+      owner: p.profiles?.owner_name || '익명 집사',
+      body: p.content || '',
+      likes: counts[p.id] || 0,
+      gradient: gradients[i % gradients.length],
+      imageUrl: p.image_url,
+      comments: (commentRows || [])
+        .filter((c: any) => c.post_id === p.id)
+        .map((c: any) => ({ id: c.id, who: c.profiles?.owner_name || '익명 집사', body: c.content })),
+    }));
+    setPosts(mapped);
+    setUsingMock(false);
+  };
 
-    load();
+  useEffect(() => {
+    loadAll();
   }, []);
 
   const toggleLike = async (post: Post) => {
@@ -105,6 +119,30 @@ export default function CatStarClient() {
     const delta = isLiked ? -1 : 1;
     setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, likes: p.likes + delta } : p)));
     setSelected((prev) => (prev && prev.id === post.id ? { ...prev, likes: prev.likes + delta } : prev));
+  };
+
+  const handleSubmitComment = async () => {
+    if (!commentText.trim() || !selected?.id) return;
+    if (!userId) {
+      window.location.href = '/login';
+      return;
+    }
+    setSubmittingComment(true);
+    const supabase = createClient();
+    const { error } = await supabase.from('catstar_comments').insert({
+      post_id: selected.id,
+      owner_id: userId,
+      content: commentText,
+    });
+    setSubmittingComment(false);
+    if (error) {
+      showToast('댓글 등록 중 문제가 발생했어요.');
+      return;
+    }
+    showToast('댓글이 등록됐어요 🐾');
+    setCommentText('');
+    setSelected(null);
+    loadAll();
   };
 
   return (
@@ -149,8 +187,9 @@ export default function CatStarClient() {
             <div className="p-3.5">
               <p className="font-mono text-[10px] text-rust mb-1">{p.cat}</p>
               <p className="text-[13.5px] font-bold mb-1.5 truncate">{p.title}</p>
-              <p className="text-[11px] text-inkDim">
-                {likedIds.has(p.id || '') ? '♥' : '♡'} {p.likes}
+              <p className="text-[11px] text-inkDim flex gap-2.5">
+                <span>{likedIds.has(p.id || '') ? '♥' : '♡'} {p.likes}</span>
+                <span>💬 {p.comments.length}</span>
               </p>
             </div>
           </button>
@@ -193,12 +232,54 @@ export default function CatStarClient() {
             </div>
             <h2 className="font-serif text-xl text-forest mb-3">{selected.title}</h2>
             <p className="text-sm leading-[1.85] bg-paper p-4.5 rounded-2xl mb-5">{selected.body}</p>
-            <div className="flex gap-4.5 text-[13.5px] text-inkDim">
+
+            <div className="flex gap-4.5 text-[13.5px] text-inkDim mb-6">
               <button
                 onClick={() => toggleLike(selected)}
                 className={likedIds.has(selected.id || '') ? 'text-rust font-bold' : ''}
               >
                 {likedIds.has(selected.id || '') ? '♥' : '♡'} {selected.likes}
+              </button>
+              <span>💬 {selected.comments.length}</span>
+            </div>
+
+            <p className="font-mono text-[11px] tracking-wide text-inkDim mb-4">
+              댓글 {selected.comments.length}개
+            </p>
+            <div className="mb-5.5">
+              {selected.comments.length === 0 ? (
+                <p className="text-[13px] text-inkDim">아직 댓글이 없어요. 첫 댓글을 남겨보세요!</p>
+              ) : (
+                selected.comments.map((c, i) => (
+                  <div key={c.id || i} className="flex gap-2.5 mb-3.5">
+                    <div className="w-7 h-7 rounded-full bg-paper flex-shrink-0 flex items-center justify-center text-xs">
+                      🐾
+                    </div>
+                    <div className="text-[12.5px]">
+                      <div className="font-bold text-forest mb-1">{c.who}</div>
+                      <p className="leading-relaxed">{c.body}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onFocus={() => {
+                  if (!userId) window.location.href = '/login';
+                }}
+                placeholder="댓글을 남겨보세요"
+                className="flex-1 bg-paper border border-line rounded-full px-4.5 py-3.5 text-[13.5px] outline-none"
+              />
+              <button
+                onClick={handleSubmitComment}
+                disabled={submittingComment}
+                className="bg-rust text-[#FBF3E8] rounded-full px-5.5 text-[13.5px] font-bold disabled:opacity-50"
+              >
+                등록
               </button>
             </div>
           </div>

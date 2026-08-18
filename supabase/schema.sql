@@ -55,6 +55,15 @@ create table if not exists catstar_likes (
   primary key (post_id, owner_id)
 );
 
+-- 4c. catstar_comments: 댓글
+create table if not exists catstar_comments (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid references catstar_posts(id) on delete cascade,
+  owner_id uuid references profiles(id) on delete cascade,
+  content text not null,
+  created_at timestamptz default now()
+);
+
 -- 5. qna_questions / qna_answers
 create table if not exists qna_questions (
   id uuid primary key default gen_random_uuid(),
@@ -95,6 +104,7 @@ alter table cats enable row level security;
 alter table fortunes enable row level security;
 alter table catstar_posts enable row level security;
 alter table catstar_likes enable row level security;
+alter table catstar_comments enable row level security;
 alter table qna_questions enable row level security;
 alter table qna_answers enable row level security;
 alter table comu_posts enable row level security;
@@ -123,6 +133,11 @@ create policy "users can delete own catstar posts" on catstar_posts for delete u
 create policy "catstar likes are viewable by everyone" on catstar_likes for select using (true);
 create policy "users can like as themselves" on catstar_likes for insert with check (auth.uid() = owner_id);
 create policy "users can unlike their own like" on catstar_likes for delete using (auth.uid() = owner_id);
+
+create policy "catstar comments are viewable by everyone" on catstar_comments for select using (true);
+create policy "users can insert own catstar comments" on catstar_comments for insert with check (auth.uid() = owner_id);
+create policy "users can update own catstar comments" on catstar_comments for update using (auth.uid() = owner_id);
+create policy "users can delete own catstar comments" on catstar_comments for delete using (auth.uid() = owner_id);
 
 -- qna: 열람 공개, 작성/수정/삭제는 본인만
 create policy "qna questions are viewable by everyone" on qna_questions for select using (true);
