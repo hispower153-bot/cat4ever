@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useToast } from '../../components/ToastProvider';
 import { createClient } from '@/lib/supabase/client';
 
-export default function LoginClient() {
+function LoginContent() {
   const { showToast } = useToast();
+  const searchParams = useSearchParams();
+  const next = searchParams.get('next') || '/';
   const [loading, setLoading] = useState(false);
 
   const handleGoogleLogin = async () => {
@@ -17,7 +20,9 @@ export default function LoginClient() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      },
     });
     if (error) {
       showToast('로그인 설정이 아직 완료되지 않았어요.');
@@ -111,3 +116,12 @@ export default function LoginClient() {
     </main>
   );
 }
+
+export default function LoginClient() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
+  );
+}
+

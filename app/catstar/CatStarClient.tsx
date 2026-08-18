@@ -100,7 +100,7 @@ export default function CatStarClient() {
   const toggleLike = async (post: Post) => {
     if (!post.id) return;
     if (!userId) {
-      window.location.href = '/login';
+      window.location.href = '/login?next=/catstar';
       return;
     }
     const supabase = createClient();
@@ -124,7 +124,7 @@ export default function CatStarClient() {
   const handleSubmitComment = async () => {
     if (!commentText.trim() || !selected?.id) return;
     if (!userId) {
-      window.location.href = '/login';
+      window.location.href = '/login?next=/catstar';
       return;
     }
     setSubmittingComment(true);
@@ -269,7 +269,7 @@ export default function CatStarClient() {
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 onFocus={() => {
-                  if (!userId) window.location.href = '/login';
+                  if (!userId) window.location.href = '/login?next=/catstar';
                 }}
                 placeholder="댓글을 남겨보세요"
                 className="flex-1 bg-paper border border-line rounded-full px-4.5 py-3.5 text-[13.5px] outline-none"

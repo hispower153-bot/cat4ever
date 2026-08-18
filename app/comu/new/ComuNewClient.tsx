@@ -16,7 +16,7 @@ export default function ComuNewClient() {
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) router.push('/login');
+      if (!data.user) router.push('/login?next=/comu/new');
       else setChecking(false);
     });
   }, [router]);
@@ -30,7 +30,7 @@ export default function ComuNewClient() {
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) {
-      router.push('/login');
+      router.push('/login?next=/comu/new');
       return;
     }
     const { error } = await supabase.from('comu_posts').insert({

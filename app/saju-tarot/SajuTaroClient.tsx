@@ -9,8 +9,9 @@ const glyphs = ['✦', '☾', '♜', '✧', '☉', '♡', '✶', '☽', '♛', '
 function SajuTaroContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const ownerName = searchParams.get('owner') || '집사';
-  const catName = searchParams.get('cat') || '우리 냥이';
+  const [ownerName, setOwnerName] = useState(searchParams.get('owner') || '');
+  const [catName, setCatName] = useState(searchParams.get('cat') || '');
+  const namesReady = ownerName.trim().length > 0 && catName.trim().length > 0;
 
   const [mode, setMode] = useState<'saju' | 'tarot'>('saju');
 
@@ -165,14 +166,61 @@ function SajuTaroContent() {
           <p className="font-accent italic text-[12.5px] tracking-[2.5px] text-goldSoft mb-3">
             TODAY&apos;S READING
           </p>
-          <h1 className="font-serif font-black text-2xl md:text-3xl text-cream mb-2 leading-[1.4]">
-            <span className="text-goldSoft">{catName}</span>의 오늘, 어떤 이야기가 기다리고 있을까요
-          </h1>
-          <p className="text-[13.5px] text-cream/80">{ownerName}님이 등록한 {catName}를 위한 운세예요</p>
+          {namesReady ? (
+            <>
+              <h1 className="font-serif font-black text-2xl md:text-3xl text-cream mb-2 leading-[1.4]">
+                <span className="text-goldSoft">{catName}</span>의 오늘, 어떤 이야기가 기다리고 있을까요
+              </h1>
+              <p className="text-[13.5px] text-cream/80">{ownerName}님이 등록한 {catName}를 위한 운세예요</p>
+            </>
+          ) : (
+            <>
+              <h1 className="font-serif font-black text-2xl md:text-3xl text-cream mb-2 leading-[1.4]">
+                우리 냥이의 오늘, 어떤 이야기가 기다리고 있을까요
+              </h1>
+              <p className="text-[13.5px] text-cream/80">이름을 알려주시면 운세를 시작할 수 있어요</p>
+            </>
+          )}
         </div>
       </div>
 
       <div className="max-w-narrow mx-auto">
+        {!namesReady ? (
+          <div className="bg-paper border border-line rounded-[20px] p-8 shadow-[0_10px_28px_rgba(43,42,37,0.05)]">
+            <p className="font-mono text-[10.5px] tracking-[1.5px] text-inkDim uppercase mb-3">
+              누구의 운세를 볼까요
+            </p>
+            <div className="flex flex-col gap-3 mb-5">
+              <input
+                type="text"
+                value={ownerName}
+                onChange={(e) => setOwnerName(e.target.value)}
+                placeholder="주인 이름"
+                className="bg-cream border border-line rounded-xl px-4 py-3.5 text-sm outline-none"
+              />
+              <input
+                type="text"
+                value={catName}
+                onChange={(e) => setCatName(e.target.value)}
+                placeholder="고양이 이름"
+                className="bg-cream border border-line rounded-xl px-4 py-3.5 text-sm outline-none"
+              />
+            </div>
+            <button
+              disabled={!ownerName.trim() || !catName.trim()}
+              onClick={() => {
+                // 상태는 이미 반영돼 있으니 그냥 리렌더만 트리거되도록 아무 것도 안 해도 되지만,
+                // URL에도 남겨두면 새로고침해도 유지돼서 편해요.
+                const params = new URLSearchParams({ owner: ownerName, cat: catName });
+                router.replace(`/saju-tarot?${params.toString()}`);
+              }}
+              className="w-full bg-forest text-cream rounded-2xl py-4 font-bold text-[14.5px] disabled:opacity-40"
+            >
+              시작하기
+            </button>
+          </div>
+        ) : (
+          <>
         {/* tabs */}
         <div className="flex bg-paper border border-line rounded-full p-1 mb-7 shadow-[0_6px_18px_rgba(43,42,37,0.05)]">
           <button
@@ -335,6 +383,8 @@ function SajuTaroContent() {
               결과 확인하기 →
             </button>
           </>
+        )}
+        </>
         )}
       </div>
     </main>

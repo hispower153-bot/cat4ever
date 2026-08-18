@@ -16,7 +16,7 @@ export default function QnaNewClient() {
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) router.push('/login');
+      if (!data.user) router.push('/login?next=/qna/new');
       else setChecking(false);
     });
   }, [router]);
@@ -30,7 +30,7 @@ export default function QnaNewClient() {
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) {
-      router.push('/login');
+      router.push('/login?next=/qna/new');
       return;
     }
     const { error } = await supabase.from('qna_questions').insert({

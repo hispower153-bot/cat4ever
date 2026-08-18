@@ -106,7 +106,7 @@ export default function QnaClient() {
   const handleSubmitAnswer = async () => {
     if (!answerText.trim() || !selected?.id) return;
     if (!isLoggedIn) {
-      window.location.href = '/login';
+      window.location.href = '/login?next=/qna';
       return;
     }
     setSubmittingAnswer(true);
@@ -222,7 +222,7 @@ export default function QnaClient() {
                 value={answerText}
                 onChange={(e) => setAnswerText(e.target.value)}
                 onFocus={() => {
-                  if (!isLoggedIn) window.location.href = '/login';
+                  if (!isLoggedIn) window.location.href = '/login?next=/qna';
                 }}
                 placeholder="답변을 남겨보세요"
                 className="flex-1 bg-paper border border-line rounded-full px-4.5 py-3.5 text-[13.5px] outline-none"

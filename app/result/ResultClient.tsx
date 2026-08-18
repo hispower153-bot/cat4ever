@@ -122,7 +122,7 @@ function ResultContent() {
             <p className="text-xs text-inkDim leading-relaxed">운세 요약이 채워진 채로 CatStar에 남겨보세요</p>
           </div>
           <Link
-            href="/login"
+            href="/login?next=/catstar/new"
             className="bg-rust text-[#FBF3E8] rounded-full px-4 py-2.5 text-xs font-bold whitespace-nowrap"
           >
             기록하기

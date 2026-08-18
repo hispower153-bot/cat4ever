@@ -1,9 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '../components/ToastProvider';
+import { createClient } from '@/lib/supabase/client';
+import { isSupabaseConfigured } from '@/lib/supabase/isConfigured';
 
 const miniFeatures = [
   { key: 'gunghap', icon: '♡', title: '냥궁합', badge: 'bg-pink/20 text-pink', href: '/gunghap' },
@@ -11,7 +13,15 @@ const miniFeatures = [
   { key: 'star', icon: '✦', title: '별자리', badge: 'bg-violet/20 text-violet', href: '/star' },
 ];
 
-const communityPosts = [
+type CommunityPost = { cls: string; emoji: string; cap: string; who: string; imageUrl?: string | null };
+
+const gradients = [
+  'from-[#D9C89A] to-[#B8965A]', 'from-[#A8B896] to-[#6F8259]',
+  'from-[#C9A8A0] to-[#A8695C]', 'from-[#A0B8C0] to-[#5C8299]',
+];
+const emojis = ['🐈', '😺', '🐾', '🐈‍⬛'];
+
+const mockCommunityPosts: CommunityPost[] = [
   { cls: 'from-[#D9C89A] to-[#B8965A]', emoji: '🐈', cap: '창가 명상 중', who: '나비 · 혜영 집사' },
   { cls: 'from-[#A8B896] to-[#6F8259]', emoji: '😺', cap: '간식 쟁탈전', who: '두부 · 준영 집사' },
   { cls: 'from-[#C9A8A0] to-[#A8695C]', emoji: '🐾', cap: '박스가 최고야', who: '콩이 · 수민 집사' },
@@ -23,11 +33,35 @@ export default function HomeClient() {
   const router = useRouter();
   const [ownerName, setOwnerName] = useState('');
   const [catName, setCatName] = useState('');
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(mockCommunityPosts);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    const supabase = createClient();
+    supabase
+      .from('catstar_posts')
+      .select('title, image_url, profiles(owner_name), cats(name)')
+      .order('created_at', { ascending: false })
+      .limit(4)
+      .then(({ data, error }) => {
+        if (error || !data || data.length === 0) return; // 글이 아직 없으면 예시 유지
+        const mapped: CommunityPost[] = data.map((p: any, i: number) => ({
+          cls: gradients[i % gradients.length],
+          emoji: emojis[i % emojis.length],
+          cap: p.title,
+          who: `${p.cats?.name || '이름 없는 냥이'} · ${p.profiles?.owner_name || '익명 집사'}`,
+          imageUrl: p.image_url,
+        }));
+        setCommunityPosts(mapped);
+      });
+  }, []);
 
   const startJourney = () => {
-    const params = new URLSearchParams();
-    if (ownerName) params.set('owner', ownerName);
-    if (catName) params.set('cat', catName);
+    if (!ownerName.trim() || !catName.trim()) {
+      showToast('주인과 고양이 이름을 먼저 입력해주세요 🐾');
+      return;
+    }
+    const params = new URLSearchParams({ owner: ownerName, cat: catName });
     router.push(`/saju-tarot?${params.toString()}`);
   };
 
@@ -156,8 +190,13 @@ export default function HomeClient() {
             key={i}
             className="bg-paper border border-line rounded-2xl p-3 pb-4 hover:-translate-y-1 hover:-rotate-1 transition-transform"
           >
-            <div className={`aspect-square rounded-lg mb-3 flex items-center justify-center text-2xl bg-gradient-to-br ${p.cls}`}>
-              {p.emoji}
+            <div className={`aspect-square rounded-lg mb-3 flex items-center justify-center text-2xl bg-gradient-to-br ${p.cls} overflow-hidden`}>
+              {p.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={p.imageUrl} alt={p.cap} className="w-full h-full object-cover" />
+              ) : (
+                p.emoji
+              )}
             </div>
             <p className="text-xs font-bold mb-0.5">{p.cap}</p>
             <p className="text-[10.5px] text-inkDim">{p.who}</p>

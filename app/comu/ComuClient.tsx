@@ -122,7 +122,7 @@ export default function ComuClient() {
   const handleSubmitComment = async () => {
     if (!commentText.trim() || !selected?.id) return;
     if (!isLoggedIn) {
-      window.location.href = '/login';
+      window.location.href = '/login?next=/comu';
       return;
     }
     setSubmittingComment(true);
@@ -245,7 +245,7 @@ export default function ComuClient() {
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 onFocus={() => {
-                  if (!isLoggedIn) window.location.href = '/login';
+                  if (!isLoggedIn) window.location.href = '/login?next=/comu';
                 }}
                 placeholder="댓글을 남겨보세요"
                 className="flex-1 bg-paper border border-line rounded-full px-4.5 py-3.5 text-[13.5px] outline-none"

@@ -42,7 +42,7 @@ export default function CatStarNewClient() {
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) {
-        router.push('/login');
+        router.push('/login?next=/catstar/new');
         return;
       }
       setUserId(data.user.id);
@@ -94,7 +94,7 @@ export default function CatStarNewClient() {
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) {
-      router.push('/login');
+      router.push('/login?next=/catstar/new');
       return;
     }
 
